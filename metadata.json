@@ -1,0 +1,5 @@
+{
+  "name": "ProProfile AI",
+  "description": "Transform casual selfies into professional LinkedIn headshots using Gemini.",
+  "requestFramePermissions": []
+}
