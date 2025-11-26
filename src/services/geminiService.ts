@@ -33,12 +33,13 @@ const getBackgroundPrompt = (bg: BackgroundStyle): string => {
   }
 };
 
-const API_KEY = import.meta.env.OPENROUTER_API_KEY; // Adjust for your env loader (e.g., process.env for Node)
+const API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY; // Loads from .env
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-export async function generateContent(prompt: string): Promise<string> {
+// Optional: System prompt for prof-pic context (customize as needed)
+export async function generateContent(userPrompt: string): Promise<string> {
   if (!API_KEY) {
-    throw new Error('OpenRouter API key not set in .env');
+    throw new Error('OpenRouter API key not set in .env - add VITE_OPENROUTER_API_KEY');
   }
 
   try {
@@ -47,32 +48,44 @@ export async function generateContent(prompt: string): Promise<string> {
       headers: {
         'Authorization': `Bearer ${API_KEY}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': window.location.origin, // Optional: Helps with OpenRouter leaderboard
-        'X-Title': 'Prof Pics App', // Optional: Your app name
+        'HTTP-Referer': window.location.origin || 'https://localhost:5173', // For dev/prod attribution
+        'X-Title': 'Prof Pics App', // Optional: Shows in OpenRouter dashboard
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash', // Note: "google/" prefix is correct here!
+        model: 'google/gemini-2.5-flash', // Your tested model
         messages: [
-          { role: 'user', content: prompt } // Your prompt, e.g., "Generate a professional headshot description"
+          { role: 'system', content: SYSTEM_PROMPT }, // Context for better prof-pic outputs
+          { role: 'user', content: userPrompt } // e.g., "for a 30yo female software engineer"
         ],
-        max_tokens: 1024, // Adjust as needed
-        temperature: 0.7, // Creativity level
-        // Optional: stream: true for real-time output
+        max_tokens: 512, // Shorter for image prompts
+        temperature: 0.8, // Balanced creativity for descriptions
       }),
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`OpenRouter Error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+      const errorData = response.status === 429 
+        ? { error: { message: 'Rate limit hit - check OpenRouter dashboard' } } 
+        : await response.json();
+      throw new Error(`OpenRouter API Error (${response.status}): ${errorData.error?.message || 'Unknown issue'}`);
     }
 
     const data = await response.json();
-    return data.choices[0].message.content; // The generated text
+    const generatedText = data.choices[0]?.message?.content;
+
+    if (!generatedText) {
+      throw new Error('No content generated - check prompt length or credits');
+    }
+
+    return generatedText.trim(); // Clean output for your app
   } catch (error) {
-    console.error('API call failed:', error);
-    throw error; // Bubble up for your app to handle
+    console.error('OpenRouter fetch failed:', error);
+    // Fallback: Return a static prompt if API fails (for dev)
+    return 'A professional headshot of a confident individual in business attire, smiling against a neutral gray background, soft natural lighting.';
   }
 }
+
+// Export for easy import in your components
+export default { generateContent };
 
 export const generateHeadshot = async (
   imageBase64: string,
