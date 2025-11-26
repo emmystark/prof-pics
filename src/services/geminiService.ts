@@ -33,6 +33,47 @@ const getBackgroundPrompt = (bg: BackgroundStyle): string => {
   }
 };
 
+const API_KEY = import.meta.env.OPENROUTER_API_KEY; // Adjust for your env loader (e.g., process.env for Node)
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+
+export async function generateContent(prompt: string): Promise<string> {
+  if (!API_KEY) {
+    throw new Error('OpenRouter API key not set in .env');
+  }
+
+  try {
+    const response = await fetch(OPENROUTER_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${API_KEY}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.origin, // Optional: Helps with OpenRouter leaderboard
+        'X-Title': 'Prof Pics App', // Optional: Your app name
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash', // Note: "google/" prefix is correct here!
+        messages: [
+          { role: 'user', content: prompt } // Your prompt, e.g., "Generate a professional headshot description"
+        ],
+        max_tokens: 1024, // Adjust as needed
+        temperature: 0.7, // Creativity level
+        // Optional: stream: true for real-time output
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`OpenRouter Error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+    }
+
+    const data = await response.json();
+    return data.choices[0].message.content; // The generated text
+  } catch (error) {
+    console.error('API call failed:', error);
+    throw error; // Bubble up for your app to handle
+  }
+}
+
 export const generateHeadshot = async (
   imageBase64: string,
   mimeType: string,
@@ -47,7 +88,7 @@ export const generateHeadshot = async (
   // We ask Gemini to describe the image first to ensure it understands the face, 
   // then we instruct it to modify it.
   // Using gemini-2.5-flash-image for speed and efficiency in editing.
-  const model = 'google/gemini-2.5-flash';
+  const model = 'gemini-2.5-flash-image';
 
   const prompt = `
     You are a world-class professional photographer and photo editor.
@@ -108,4 +149,8 @@ export const generateHeadshot = async (
     console.error("Gemini API Error:", error);
     throw error;
   }
+
+
+
+  
 };
