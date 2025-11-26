@@ -33,60 +33,6 @@ const getBackgroundPrompt = (bg: BackgroundStyle): string => {
   }
 };
 
-const API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY; // Loads from .env
-const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-
-// Optional: System prompt for prof-pic context (customize as needed)
-export async function generateContent(userPrompt: string): Promise<string> {
-  if (!API_KEY) {
-    throw new Error('OpenRouter API key not set in .env - add VITE_OPENROUTER_API_KEY');
-  }
-
-  try {
-    const response = await fetch(OPENROUTER_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${API_KEY}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': window.location.origin || 'https://localhost:5173', // For dev/prod attribution
-        'X-Title': 'Prof Pics App', // Optional: Shows in OpenRouter dashboard
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash', // Your tested model
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT }, // Context for better prof-pic outputs
-          { role: 'user', content: userPrompt } // e.g., "for a 30yo female software engineer"
-        ],
-        max_tokens: 512, // Shorter for image prompts
-        temperature: 0.8, // Balanced creativity for descriptions
-      }),
-    });
-
-    if (!response.ok) {
-      const errorData = response.status === 429 
-        ? { error: { message: 'Rate limit hit - check OpenRouter dashboard' } } 
-        : await response.json();
-      throw new Error(`OpenRouter API Error (${response.status}): ${errorData.error?.message || 'Unknown issue'}`);
-    }
-
-    const data = await response.json();
-    const generatedText = data.choices[0]?.message?.content;
-
-    if (!generatedText) {
-      throw new Error('No content generated - check prompt length or credits');
-    }
-
-    return generatedText.trim(); // Clean output for your app
-  } catch (error) {
-    console.error('OpenRouter fetch failed:', error);
-    // Fallback: Return a static prompt if API fails (for dev)
-    return 'A professional headshot of a confident individual in business attire, smiling against a neutral gray background, soft natural lighting.';
-  }
-}
-
-// Export for easy import in your components
-export default { generateContent };
-
 export const generateHeadshot = async (
   imageBase64: string,
   mimeType: string,
@@ -162,8 +108,4 @@ export const generateHeadshot = async (
     console.error("Gemini API Error:", error);
     throw error;
   }
-
-
-
-  
 };
