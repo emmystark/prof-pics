@@ -47,7 +47,7 @@ export const generateHeadshot = async (
   // We ask Gemini to describe the image first to ensure it understands the face, 
   // then we instruct it to modify it.
   // Using gemini-2.5-flash-image for speed and efficiency in editing.
-  const model = 'gemini-2.5-flash-image';
+  const model = 'google/gemini-2.5-flash';
 
   const prompt = `
     You are a world-class professional photographer and photo editor.
